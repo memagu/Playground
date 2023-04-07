@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 use std::thread::{self, JoinHandle};
 use std::time::Instant;
 
-use rand::{self, rngs::ThreadRng, Rng};
+use rand::{self, rngs::SmallRng, Rng, SeedableRng};
 
 const THREADS: usize = 12;
 
@@ -11,7 +11,7 @@ fn buffons_needle(n: usize) -> f64 {
     let hits: usize = (0..THREADS)
         .map(|_| {
             thread::spawn(move || {
-                let mut rng: ThreadRng = rand::thread_rng();
+                let mut rng: SmallRng = SmallRng::from_entropy();
                 let mut local_hits: usize = 0;
 
                 for _ in 0..chunk_size {

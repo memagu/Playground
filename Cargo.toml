@@ -5,6 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[profile.release]
+debug = true
+
 [dependencies]
 clgl = "0.2.4"
-rand = "*"
+rand = { version = "0.8.5", features = [ "small_rng" ] }
+fastrand = "1.9.0"
+nanorand = "0.7.0"
