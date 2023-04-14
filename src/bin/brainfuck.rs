@@ -5,14 +5,14 @@ use std::fs::read;
 use std::path::Path;
 use std::time::Instant;
 
-mod interpreters {
-    const MEMORY_SIZE: usize = 2usize.pow(15);
+const MEMORY_SIZE: usize = 2usize.pow(15);
 
+mod interpreters {
     pub mod basic {
         use std::collections::HashMap;
         use std::io::{stdin, stdout, BufRead, BufWriter, StdoutLock, Write};
 
-        use crate::interpreters::MEMORY_SIZE;
+        use crate::MEMORY_SIZE;
 
         fn generate_bracket_map(program: &[u8]) -> Result<HashMap<usize, usize>, &'static str> {
             let mut stack: Vec<usize> = Vec::new();
@@ -103,7 +103,7 @@ mod interpreters {
         use std::collections::HashMap;
         use std::io::{stdin, stdout, BufRead, BufWriter, StdoutLock, Write};
 
-        use crate::interpreters::MEMORY_SIZE;
+        use crate::MEMORY_SIZE;
 
         fn compress_program(program: &[u8]) -> Vec<(u8, usize)> {
             let mut compressed_program: Vec<(u8, usize)> = Vec::with_capacity(program.len());
@@ -191,11 +191,11 @@ mod interpreters {
                     b'<' => memory_pointer -= instruction_count,
                     b'+' => {
                         memory[memory_pointer] = memory[memory_pointer]
-                            .wrapping_add((instruction_count % 256usize) as u8);
+                            .wrapping_add((instruction_count % 256usize) as u8)
                     }
                     b'-' => {
                         memory[memory_pointer] = memory[memory_pointer]
-                            .wrapping_sub((instruction_count % 256usize) as u8);
+                            .wrapping_sub((instruction_count % 256usize) as u8)
                     }
                     b'.' => {
                         if let Some(byte) = memory
@@ -231,6 +231,96 @@ mod interpreters {
     }
 }
 
+mod compilers {
+    const RUST_INTERMEDIARY_FILENAME: &str = "transpiled_brainfuck.rs";
+
+    pub mod optimized {
+        use std::fs::{remove_file, File};
+        use std::io::Write;
+        use std::process::Command;
+
+        use crate::compilers::RUST_INTERMEDIARY_FILENAME;
+        use crate::MEMORY_SIZE;
+
+        fn compress_program(program: &[u8]) -> Vec<(u8, usize)> {
+            let mut compressed_program: Vec<(u8, usize)> = Vec::with_capacity(program.len());
+            let Some((program_start_index, mut current_instruction)) = program
+                .iter()
+                .enumerate()
+                .find(|(_, &instruction)| {
+                    if let b'>' | b'<' | b'+' | b'-' | b'.' | b',' | b'[' | b']' = instruction {
+                        true
+                    } else {
+                        false
+                    }
+                }) else { return compressed_program; };
+            let mut instruction_count: usize = 1usize;
+
+            for instruction in program.iter().skip(program_start_index + 1usize) {
+                if let b'>' | b'<' | b'+' | b'-' | b'.' | b',' | b'[' | b']' = instruction {
+                    if let b'>' | b'<' | b'+' | b'-' = current_instruction {
+                        if current_instruction == instruction {
+                            instruction_count += 1usize;
+                            continue;
+                        };
+                    };
+                    compressed_program.push((*current_instruction, instruction_count));
+                    current_instruction = instruction;
+                    instruction_count = 1usize;
+                };
+            }
+
+            compressed_program.push((*current_instruction, instruction_count));
+
+            compressed_program
+        }
+
+        fn transpile(compressed_program: &Vec<(u8, usize)>) -> Vec<u8> {
+            let mut transpiled_program: Vec<u8> = Vec::new();
+
+            transpiled_program.extend(format!("use std::io::{{stdin, stdout, BufRead, BufWriter, StdoutLock, Write}};const MEMORY_SIZE: usize = {}usize;fn main () {{let mut buffered_stdout_lock: BufWriter<StdoutLock> = BufWriter::new(stdout().lock());let mut memory: [u8; MEMORY_SIZE] = [0u8; MEMORY_SIZE];let mut memory_pointer: usize = 0usize;let mut input_buffer: Vec<u8> = Vec::new();", MEMORY_SIZE).bytes());
+            for (instruction, instruction_count) in compressed_program {
+                transpiled_program.extend(match instruction {
+                    b'>' => format!("memory_pointer += {}usize;", instruction_count),
+                    b'<' => format!("memory_pointer -= {}usize;", instruction_count),
+                    b'+' => format!("memory[memory_pointer] = memory[memory_pointer].wrapping_add(({}usize % 256usize) as u8);", instruction_count),
+                    b'-' => format!("memory[memory_pointer] = memory[memory_pointer].wrapping_sub(({}usize % 256usize) as u8);", instruction_count),
+                    b'.' => "if let Some(byte) = memory.get(memory_pointer).cloned().filter(|&byte| byte.is_ascii()){buffered_stdout_lock.write_all(&[byte]).unwrap();buffered_stdout_lock.flush().unwrap();}".to_string(),
+                    b',' => "if input_buffer.is_empty() {stdin().lock().read_until(b'\\n', &mut input_buffer).unwrap();};memory[memory_pointer] = input_buffer.remove(0usize);".to_string(),
+                    b'[' => "while *memory.get(memory_pointer).unwrap() != 0u8 {".to_string(),
+                    b']' => "};".to_string(),
+                    _ => "".to_string(),
+                }.bytes()
+                )
+            }
+
+            transpiled_program.push(b'}');
+
+            transpiled_program
+        }
+
+        pub fn compile(program: &[u8], output_path: &String) {
+            File::create(RUST_INTERMEDIARY_FILENAME)
+                .unwrap()
+                .write_all(&transpile(&compress_program(&program)))
+                .unwrap();
+
+            Command::new("rustc")
+                .args([
+                    RUST_INTERMEDIARY_FILENAME,
+                    "-o",
+                    output_path,
+                    "-C",
+                    "opt-level=3",
+                ])
+                .output()
+                .expect("Program failed to compile.");
+
+            remove_file(RUST_INTERMEDIARY_FILENAME).unwrap();
+        }
+    }
+}
+
 fn main() {
     let program: Vec<u8> = read(Path::new(
         &args()
@@ -241,6 +331,7 @@ fn main() {
     .unwrap();
 
     let start: Instant = Instant::now();
-    interpreters::optimized::run(&program);
+    // interpreters::optimized::run(&program);
+    compilers::optimized::compile(&program, &"./hehehe".to_string());
     println!("\nExecution finished in {:?}", start.elapsed());
 }
