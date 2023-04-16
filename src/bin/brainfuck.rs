@@ -1,12 +1,7 @@
-#![allow(dead_code)]
-#![allow(unused)]
+use clap::{Arg, ArgMatches, Command, ValueHint};
 
-use clap::{Arg, ArgAction, Command, ValueHint};
-
-use std::env::args;
 use std::fs::read;
-use std::path::Path;
-use std::time::Instant;
+use std::path::{Path, PathBuf};
 
 const MEMORY_SIZE: usize = 2usize.pow(15);
 
@@ -240,6 +235,7 @@ mod compilers {
     pub mod optimized {
         use std::fs::{remove_file, File};
         use std::io::Write;
+        use std::path::PathBuf;
         use std::process::Command;
 
         use crate::compilers::RUST_INTERMEDIARY_FILENAME;
@@ -315,19 +311,30 @@ mod compilers {
                     output_path,
                     "-C",
                     "opt-level=3",
+                    "-C",
+                    "debuginfo=0",
                 ])
                 .output()
                 .expect("Program failed to compile.");
 
             remove_file(RUST_INTERMEDIARY_FILENAME).unwrap();
+
+            let mut path_buf: PathBuf = PathBuf::from(output_path);
+            path_buf.set_extension("pdb");
+
+            if path_buf.exists() {
+                remove_file(path_buf).unwrap();
+            };
         }
     }
 }
 
 fn main() {
-    let mut cmd: Command = Command::new("brainfuck")
+    let cmd: Command = Command::new("brainfuck")
+        .version("0.1.0")
         .author("Melker Widen")
         .about("A bundled interpreter and compiler for brainfuck programs.")
+        .propagate_version(true)
         .subcommand_required(true)
         .arg(
             Arg::new("INPUT")
@@ -345,7 +352,7 @@ fn main() {
                     Arg::new("mode")
                         .short('m')
                         .long("mode")
-                        .value_names(["basic", "optimized"])
+                        .value_parser(["basic", "optimized"])
                         .default_value("optimized")
                         .help("Set optimization level of interpreter"),
                 ),
@@ -355,28 +362,40 @@ fn main() {
                 .short_flag('C')
                 .about("Use as a compiler")
                 .arg(
-                Arg::new("output")
-                    .short('o')
-                    .long("output")
-                    .value_name("FILENAME")
-                    .value_hint(ValueHint::FilePath)
-                    .help("Set output path of compiled brainfuck program")
-                    .required(true),
-            ),
+                    Arg::new("output")
+                        .short('o')
+                        .long("output")
+                        .value_name("FILENAME")
+                        .value_hint(ValueHint::FilePath)
+                        .help("Set output path of compiled brainfuck program"),
+                ),
         );
 
-    cmd.get_matches();
+    let matches: ArgMatches = cmd.get_matches();
 
-    //let program: Vec<u8> = read(Path::new(
-    //    &args()
-    //        .into_iter()
-    //        .nth(1)
-    //        .expect("A .b source file is required as an argument."),
-    //))
-    //.unwrap();
+    let input: &String = matches.get_one::<String>("INPUT").unwrap();
 
-    //let start: Instant = Instant::now();
-    //// interpreters::optimized::run(&program);
-    //compilers::optimized::compile(&program, &"./hehehe".to_string());
-    //println!("\nExecution finished in {:?}", start.elapsed());
+    let brainfuck_program: Vec<u8> = read(Path::new(input)).unwrap();
+
+    match matches.subcommand() {
+        Some(("interpreter", sub_matches)) => {
+            match sub_matches.get_one::<String>("mode").unwrap().as_str() {
+                "basic" => interpreters::basic::run(&brainfuck_program),
+                "optimized" => interpreters::optimized::run(&brainfuck_program),
+                _ => panic!("Invalid mode. Use 'basic' or 'optimized'."),
+            };
+        }
+        Some(("compiler", sub_matches)) => {
+            let output_path: String = sub_matches
+                .get_one::<String>("output")
+                .cloned()
+                .unwrap_or_else(|| -> String {
+                    let mut path_buf: PathBuf = PathBuf::from(input);
+                    path_buf.set_extension("exe");
+                    path_buf.file_name().unwrap().to_string_lossy().into_owned()
+                });
+            compilers::optimized::compile(&brainfuck_program, &output_path);
+        }
+        _ => (),
+    }
 }
