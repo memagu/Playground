@@ -352,6 +352,7 @@ fn main() {
                     Arg::new("mode")
                         .short('m')
                         .long("mode")
+                        .value_name("MODE")
                         .value_parser(["basic", "optimized"])
                         .default_value("optimized")
                         .help("Set optimization level of interpreter"),
