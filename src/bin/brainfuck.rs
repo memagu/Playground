@@ -331,7 +331,7 @@ mod compilers {
 
 fn main() {
     let cmd: Command = Command::new("brainfuck")
-        .version("0.1.0")
+        .version("1.0.0")
         .author("Melker Widen")
         .about("A bundled interpreter and compiler for brainfuck programs.")
         .propagate_version(true)
