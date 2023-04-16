@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+#![allow(unused)]
+
+use clap::{Arg, ArgAction, Command, ValueHint};
 
 use std::env::args;
 use std::fs::read;
@@ -289,7 +292,7 @@ mod compilers {
                     b',' => "if input_buffer.is_empty() {stdin().lock().read_until(b'\\n', &mut input_buffer).unwrap();};memory[memory_pointer] = input_buffer.remove(0usize);".to_string(),
                     b'[' => "while *memory.get(memory_pointer).unwrap() != 0u8 {".to_string(),
                     b']' => "};".to_string(),
-                    _ => "".to_string(),
+                    _ => String::new(),
                 }.bytes()
                 )
             }
@@ -322,16 +325,58 @@ mod compilers {
 }
 
 fn main() {
-    let program: Vec<u8> = read(Path::new(
-        &args()
-            .into_iter()
-            .nth(1)
-            .expect("A .b source file is required as an argument."),
-    ))
-    .unwrap();
+    let mut cmd: Command = Command::new("brainfuck")
+        .author("Melker Widen")
+        .about("A bundled interpreter and compiler for brainfuck programs.")
+        .subcommand_required(true)
+        .arg(
+            Arg::new("INPUT")
+                .value_name("INPUT")
+                .value_hint(ValueHint::FilePath)
+                .help("Brainfuck source file.")
+                .required(true)
+                .index(1usize),
+        )
+        .subcommand(
+            Command::new("interpreter")
+                .short_flag('I')
+                .about("Use as an interpreter")
+                .arg(
+                    Arg::new("mode")
+                        .short('m')
+                        .long("mode")
+                        .value_names(["basic", "optimized"])
+                        .default_value("optimized")
+                        .help("Set optimization level of interpreter"),
+                ),
+        )
+        .subcommand(
+            Command::new("compiler")
+                .short_flag('C')
+                .about("Use as a compiler")
+                .arg(
+                Arg::new("output")
+                    .short('o')
+                    .long("output")
+                    .value_name("FILENAME")
+                    .value_hint(ValueHint::FilePath)
+                    .help("Set output path of compiled brainfuck program")
+                    .required(true),
+            ),
+        );
 
-    let start: Instant = Instant::now();
-    // interpreters::optimized::run(&program);
-    compilers::optimized::compile(&program, &"./hehehe".to_string());
-    println!("\nExecution finished in {:?}", start.elapsed());
+    cmd.get_matches();
+
+    //let program: Vec<u8> = read(Path::new(
+    //    &args()
+    //        .into_iter()
+    //        .nth(1)
+    //        .expect("A .b source file is required as an argument."),
+    //))
+    //.unwrap();
+
+    //let start: Instant = Instant::now();
+    //// interpreters::optimized::run(&program);
+    //compilers::optimized::compile(&program, &"./hehehe".to_string());
+    //println!("\nExecution finished in {:?}", start.elapsed());
 }
