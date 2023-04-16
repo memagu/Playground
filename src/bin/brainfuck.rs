@@ -383,7 +383,7 @@ fn main() {
             match sub_matches.get_one::<String>("mode").unwrap().as_str() {
                 "basic" => interpreters::basic::run(&brainfuck_program),
                 "optimized" => interpreters::optimized::run(&brainfuck_program),
-                _ => panic!("Invalid mode. Use 'basic' or 'optimized'."),
+                _ => (),
             };
         }
         Some(("compiler", sub_matches)) => {
