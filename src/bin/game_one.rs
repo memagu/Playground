@@ -1,7 +1,8 @@
 use clgl;
 use std::{thread, time};
 
-const CHARSET: &[u8] = b" .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
+// const CHARSET: &[u8] = b" .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
+const CHARSET: &[u8] = b" `.-':_,^=;><+!rc*/z?sLTv)J7(|Fi{C}fI31tlu[neoZ5Yxjya]2ESwqkP6h9d4VpOGbUAKXHm8RD#$Bg0MNWQ%&@";
 const WIDTH: usize = 256;
 const HEIGHT: usize = 64;
 const MAX_FRAME_RATE: f64 = 1024.0f64;
@@ -87,6 +88,7 @@ fn main() {
     let mut run: bool = true;
 
     let mut canvas: clgl::canvas::Canvas = clgl::canvas::Canvas::new(WIDTH, HEIGHT, CHARSET);
+    canvas.equalize_row_column_spacing = true;
 
     let mut rects: Vec<Rect> = Vec::new();
 
