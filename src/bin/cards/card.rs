@@ -3,7 +3,7 @@ use std::fmt;
 pub const RANKS: usize = 13;
 pub const SUITS: usize = 4;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rank {
     Ace,
     Two,
@@ -38,6 +38,24 @@ impl Rank {
             Rank::King
         ]
     }
+
+    pub fn ordinal(&self) -> usize {
+        match self {
+            Rank::Ace => 0,
+            Rank::Two => 1,
+            Rank::Three => 2,
+            Rank::Four => 3,
+            Rank::Five => 4,
+            Rank::Six => 5,
+            Rank::Seven => 6,
+            Rank::Eight => 7,
+            Rank::Nine => 8,
+            Rank::Ten => 9,
+            Rank::Jack => 10,
+            Rank::Queen => 11,
+            Rank::King => 12,
+        }
+    }
 }
 
 impl fmt::Display for Rank {
@@ -60,7 +78,7 @@ impl fmt::Display for Rank {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Suit {
     Spades,
     Hearts,
@@ -77,6 +95,15 @@ impl Suit {
             Suit::Clubs
         ]
     }
+    
+    pub fn ordinal(&self) -> usize {
+        match self {
+            Suit::Spades => 0,
+            Suit::Hearts => 1,
+            Suit::Diamonds => 2,
+            Suit::Clubs => 3,
+        }
+    }
 }
 
 impl fmt::Display for Suit {
@@ -90,7 +117,7 @@ impl fmt::Display for Suit {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Card {
     pub rank: Rank,
     pub suit: Suit,
